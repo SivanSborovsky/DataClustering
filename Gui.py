@@ -171,9 +171,6 @@ def perform_context_cluster():
 
 
 def perform_statistics_cluster():
-    cluster_plot.clear()
-
-    # Step 1: Data Preprocessing
     data_folder = "Texts"
     filenames = os.listdir(data_folder)
     documents = []
@@ -189,26 +186,48 @@ def perform_statistics_cluster():
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(documents)
 
-    # Rest of your code...
 
     # Option 1: TF-IDF
     tfidf_transformer = TfidfTransformer()
     X_tfidf = tfidf_transformer.fit_transform(X)
 
-    # Option 2: Word2Vec
-    # tokenized_documents = [document.split() for document in documents]
-    # model = Word2Vec(tokenized_documents, min_count=1)
 
     # Step 3: Document Representation
     # Option 1: TF-IDF
     document_vectors = X_tfidf.toarray()
 
-    # Option 2: Word2Vec
-    # document_vectors = np.array([np.mean([model.wv[word] for word in document.split()], axis=0) for document in documents])
+    data_folder = "Texts"
+    file_paths = []
+    for filename in os.listdir(data_folder):
+        file_paths.append("Texts/" + filename)
 
-    # Rest of your code...
+    # List of dictionaries
+    dictionaries = get_dicts()
+    dict_names = get_dicts_names()
+    # Initialize the vector array
+    num_files = len(file_paths)
+    num_dicts = len(dictionaries)
+    dataset = np.zeros((num_files, num_dicts))
 
-    # Step 4: Clustering Algorithm (K-means)
+    # Iterate over the files
+    for file_index, file_path in enumerate(file_paths):
+        with open(file_path, "r", encoding="utf-8") as file:
+            text = file.read()
+            words = text.split()
+            words_count = len(words)
+
+            # Iterate over the words
+            for word in words:
+                # Check if the word belongs to any of the dictionaries
+                for dict_index, dictionary in enumerate(dictionaries):
+                    word = word.strip(".,;:\r\n")
+                    if word in dictionary:
+                        # Increment the corresponding element in the vector array
+                        # value = 0.0
+                        # value = float(1/words_count)
+                        dataset[file_index, dict_index] += 1
+
+    # Perform clustering using K-means
     num_clusters = 5  # Set the number of clusters
     kmeans = KMeans(n_clusters=num_clusters)
     cluster_labels = kmeans.fit_predict(document_vectors)
@@ -217,17 +236,12 @@ def perform_statistics_cluster():
     # Visualize Clusters
     pca = PCA(n_components=2)
     tsne = TSNE(n_components=2, perplexity=10)
-
-    # Uncomment either PCA or t-SNE for visualization
     transformed_vectors = pca.fit_transform(document_vectors)  # Use this one
-
-    # transformed_vectors = tsne.fit_transform(document_vectors)
-
     # Plot the clusters
     plt.scatter(transformed_vectors[:, 0], transformed_vectors[:, 1], c=cluster_labels, cmap='viridis')
-    plt.title("Document Clustering")
-    plt.xlabel("Dimension 1")
-    plt.ylabel("Dimension 2")
+    plt.title("Cluster by Statistics")
+    plt.xlabel("")
+    plt.ylabel("")
     # plt.clabel("Dimension 3")
 
     plt.show()
@@ -236,15 +250,108 @@ def perform_statistics_cluster():
         print(f"Cluster {cluster + 1} documents:")
         cluster_indices = np.where(cluster_labels == cluster)[0]
         for index in cluster_indices:
-            print(filenames[index])
+            print(file_dict[filenames[index]])
             print("--------------------")
         print("\n")
+    # Store file paths and vectors for each cluster
+    clusters = [[] for _ in range(num_clusters)]
+    cluster_vectors = [[] for _ in range(num_clusters)]
+    for file_index, cluster_label in enumerate(cluster_labels):
+        clusters[cluster_label].append(file_paths[file_index])
+        cluster_vectors[cluster_label].append(dataset[file_index])
 
+    # Update additional_info_text with cluster information
 
+    additional_info_text.delete("1.0", tk.END)  # Clear the text widget
+
+    # Print the file paths and average values for each cluster
+    for cluster_index, (cluster_files, cluster_vector_list) in enumerate(zip(clusters, cluster_vectors)):
+        additional_info_text.insert(tk.END, f"Cluster {cluster_index}\n")
+        additional_info_text.insert(tk.END, "Files in Cluster:\n")
+        for file_path in cluster_files:
+            story_title = file_dict[str(file_path)]
+            additional_info_text.insert(tk.END, f"{story_title}\n")
+        additional_info_text.insert(tk.END, "Averages:\n")
+
+        # Calculate the average vector for the cluster
+        cluster_vectors_avg = np.mean(cluster_vector_list, axis=0)
+        for dict_index, avg_value in enumerate(cluster_vectors_avg):
+            parameter_name = dict_names[dict_index]
+            additional_info_text.insert(tk.END, f"{parameter_name} = {avg_value:.3f}\n")
+        additional_info_text.insert(tk.END, "\n")
+
+    cluster_plot.clear()
+    # Plot the clusters for value-based clustering
+    cluster_plot.scatter(dataset[:, 0], dataset[:, 1], c=cluster_labels, cmap='viridis')
     cluster_plot.set_title("Statistics Clustering")
-    cluster_plot.set_xlabel("X-axis Label")  # Customize your X-axis label
-    cluster_plot.set_ylabel("Y-axis Label")  # Customize your Y-axis label
+    cluster_plot.set_xlabel("Value 1")
+    cluster_plot.set_ylabel("Value 2")
     cluster_canvas.draw()
+
+
+    # # Clear existing plots
+    # cluster_plot_statistics.clear()
+    #
+    # # Step 1: Data Preprocessing
+    # data_folder = "Texts"
+    # filenames = os.listdir(data_folder)
+    # documents = []
+    # for filename in os.listdir(data_folder):
+    #     with open(os.path.join(data_folder, filename), "r", encoding="utf-8") as file:
+    #         documents.append(parse_file(filename))
+    #
+    # # Join the parsed content of each file into a single string
+    # documents = [' '.join(doc) for doc in documents]
+    #
+    # # Step 2: Text Vectorization
+    # vectorizer = CountVectorizer()
+    # X = vectorizer.fit_transform(documents)
+    #
+    # # Step 3: TF-IDF Transformation
+    # tfidf_transformer = TfidfTransformer()
+    # X_tfidf = tfidf_transformer.fit_transform(X)
+    #
+    # # Step 4: Document Representation
+    # document_vectors = X_tfidf.toarray()
+    #
+    # # Step 5: Clustering Algorithm (K-means)
+    # num_clusters = 5  # Set the number of clusters
+    # kmeans = KMeans(n_clusters=num_clusters)
+    # cluster_labels = kmeans.fit_predict(document_vectors)
+    #
+    # # Step 6: Visualization
+    # pca = PCA(n_components=2)
+    # transformed_vectors = pca.fit_transform(document_vectors)
+    #
+    # # Plot the clusters
+    # cluster_plot_statistics.scatter(transformed_vectors[:, 0], transformed_vectors[:, 1],
+    #                                 c=cluster_labels, cmap='viridis')
+    # cluster_plot_statistics.set_title("Statistics Clustering")
+    # cluster_plot_statistics.set_xlabel("Dimension 1")
+    # cluster_plot_statistics.set_ylabel("Dimension 2")
+    #
+    # # Display the plot
+    # cluster_canvas_statistics.draw()
+    #
+    # # Print cluster information
+    # for cluster in range(num_clusters):
+    #     print(f"Cluster {cluster + 1} documents:")
+    #     cluster_indices = np.where(cluster_labels == cluster)[0]
+    #     for index in cluster_indices:
+    #         print(filenames[index])
+    #         print("--------------------")
+    #     print("\n")
+    #
+    # plt.show()
+    #
+    # cluster_plot.clear()
+    # cluster_plot.scatter(dataset[:, 0], dataset[:, 1], c=cluster_labels, cmap='viridis')
+    # cluster_plot.set_title("Value Clustering")
+    # cluster_plot.set_xlabel("Value 1")
+    # cluster_plot.set_ylabel("Value 2")
+    # cluster_canvas.draw()
+
+
 
 def open_screen():
     welcome_label = tk.Label(root, text=welcome_text, font=(font, 120))
@@ -324,7 +431,7 @@ def toggle_additional_info():
 
 # Create the root window
 root = tk.Tk()
-root.geometry("1200x600")
+root.geometry("1920x1080")
 
 # Start with the open screen
 open_screen()

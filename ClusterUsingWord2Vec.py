@@ -68,7 +68,7 @@ def cluster_word2vec():
 
     # Plot the clusters
     plt.scatter(transformed_vectors[:, 0], transformed_vectors[:, 1], c=cluster_labels, cmap='viridis')
-    plt.title("Document Clustering")
+    plt.title("Cluster by Context")
     plt.xlabel("")
     plt.ylabel("")
     plt.show()
